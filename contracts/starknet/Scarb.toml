@@ -1,0 +1,11 @@
+[workspace]
+members = ["account", "verifier"]
+
+[workspace.scripts]
+test = "snforge test"
+
+[workspace.tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]
+
+[cairo]
+sierra-replace-ids = false

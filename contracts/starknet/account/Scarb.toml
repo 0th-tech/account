@@ -1,0 +1,29 @@
+#:tombi schema.strict = false
+
+[package]
+name = "account"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet = "2.21.0"
+openzeppelin_account = "4.0.1"
+openzeppelin_interfaces = "2.2.0"
+openzeppelin_introspection = "4.0.1"
+openzeppelin_utils = "2.2.0"
+verifier = { path = "../verifier" }
+
+[dev-dependencies]
+snforge_std = "0.64.1"
+assert_macros = "2.21.0"
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+build-external-contracts = ["verifier::honk_verifier::UltraKeccakZKHonkVerifier"]
+
+[scripts]
+test.workspace = true
+
+[tool]
+scarb.workspace = true
