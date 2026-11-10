@@ -31,9 +31,9 @@ fn test_register_session_wrong_identity() {
 }
 
 #[test]
-#[should_panic(expected: ('unknown Google key', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('unknown provider key', 'ENTRYPOINT_FAILED'))]
 fn test_register_session_unknown_key() {
-    // The registry holds no key, so the chain cannot tell this one is Google's
+    // The registry holds no key, so the chain cannot tell this one is the provider's
     let account = setup("MockVerifier", fixture_identity(), false);
     let inputs = public_inputs(load_proof().span());
 
@@ -94,4 +94,15 @@ fn test_register_session_too_long() {
     start_cheat_block_timestamp_global(EXPIRY - MAX_SESSION - 1);
 
     account.register_session(mock_proof(inputs.span()).span()); // (must panic)
+}
+
+#[test]
+#[should_panic(expected: ('session already registered', 'ENTRYPOINT_FAILED'))]
+fn test_register_session_replay() {
+    let account = setup("MockVerifier", fixture_identity(), true);
+    let proof = mock_proof(public_inputs(load_proof().span()).span());
+    account.register_session(proof.span());
+
+    // Anyone can read the proof off the chain and send it again
+    account.register_session(proof.span()); // (must panic)
 }

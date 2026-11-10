@@ -106,13 +106,16 @@ pub mod Account {
             // Check the signing key is the provider's (the proof holds for any RSA key)
             assert(
                 IKeyRegistryDispatcher { contract_address: self.registry.read() }.is_key(modulus),
-                'unknown Google key',
+                'unknown provider key',
             );
 
             // Check the expiry
             let now = get_block_timestamp();
             assert(expiry > now, 'session expired');
             assert(expiry <= now + MAX_SESSION, 'session too long');
+
+            // Proofs are public on chain, so a replayed one is refused
+            assert(self.sessions.read(session_key) == 0, 'session already registered');
 
             // Store the session
             self.sessions.write(session_key, expiry);
