@@ -4,3 +4,7 @@ target/
 snfoundry_trace/
 coverage/
 profile/
+.env.*
+!.env.devnet
+deployments/devnet.env
+contracts/*/.sncast/

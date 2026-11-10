@@ -1,0 +1,8 @@
+[sncast.devnet]
+url = "$RPC_URL"
+account = "devnet-1"
+
+[sncast.sepolia]
+url = "$RPC_URL"
+keystore = ".sncast/sepolia.keystore.json"
+account = ".sncast/sepolia.account.json"
