@@ -3779,3 +3779,4 @@ pub fn is_on_curve_excluding_infinity_bn254(p: G1Point, modulus: CircuitModulus)
     let zero_check: u384 = outputs.get_output(y2_minus_x3);
     return zero_check == u384 { limb0: 3, limb1: 0, limb2: 0, limb3: 0 };
 }
+

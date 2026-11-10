@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 ARG GARAGA_VERSION=1.1.0
-ARG SCARB_VERSION=2.21.0
+ARG SCARB_VERSION=2.18.0
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates \
