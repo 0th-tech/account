@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: software-mansion/setup-scarb@v1
+      - uses: foundry-rs/setup-snfoundry@v5
+        with:
+          tool-versions: .tool-versions
+      - run: make test
+      - run: make fmt-check
+      # The committed verifier must be what Garaga generates from the pinned circuit release
+      - run: make verifier
+      - run: git status --porcelain && test -z "$(git status --porcelain)"
