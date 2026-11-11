@@ -33,7 +33,7 @@ fn test_register_session_wrong_identity() {
 #[test]
 #[should_panic(expected: ('unknown provider key', 'ENTRYPOINT_FAILED'))]
 fn test_register_session_unknown_key() {
-    // The registry holds no key, so the chain cannot tell this one is the provider's
+    // The registry is empty, so the proof's RSA key is unknown
     let account = setup("MockVerifier", fixture_identity(), false);
     let inputs = public_inputs(load_proof().span());
 
@@ -46,13 +46,12 @@ fn test_register_session_expired() {
     let account = setup("MockVerifier", fixture_identity(), true);
     let inputs = public_inputs(load_proof().span());
 
-    // The clock reaches the session's expiry, so there is nothing left to register
+    // The clock is at the session's expiry
     start_cheat_block_timestamp_global(EXPIRY);
 
     account.register_session(mock_proof(inputs.span()).span()); // (must panic)
 }
 
-// The only test running the real verifier, the others mock it away
 #[test]
 fn test_register_session_real_proof() {
     let account = setup("UltraKeccakZKHonkVerifier", fixture_identity(), true);
@@ -74,7 +73,7 @@ fn test_register_session_real_proof_tampered_session_key() {
     let mut proof = load_proof();
     let inputs = public_inputs(proof.span());
 
-    // Put another session key in the proof, 2, and keep the rest of it as it was
+    // Session key 2 replaces the real one, the rest of the proof is unchanged
     let tampered = replace_input(inputs.span(), SESSION_KEY_INPUT, 2);
     let mut tampered_proof = mock_proof(tampered.span());
     for i in (1 + 2 * tampered.len())..proof.len() {
@@ -90,7 +89,7 @@ fn test_register_session_too_long() {
     let account = setup("MockVerifier", fixture_identity(), true);
     let inputs = public_inputs(load_proof().span());
 
-    // One second too early, so the session now asks for more than MAX_SESSION
+    // The clock is one second too early, so the session is longer than MAX_SESSION
     start_cheat_block_timestamp_global(EXPIRY - MAX_SESSION - 1);
 
     account.register_session(mock_proof(inputs.span()).span()); // (must panic)

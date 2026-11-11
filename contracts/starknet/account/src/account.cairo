@@ -137,8 +137,6 @@ pub mod Account {
         starknet::VALIDATED
     }
 
-    // A dapp checking an off-chain signature reads the answer, so SRC6 returns 0 for a signature
-    // that does not hold rather than panicking
     #[external(v0)]
     fn is_valid_signature(
         self: @ContractState, hash: felt252, signature: Array<felt252>,
@@ -154,13 +152,12 @@ pub mod Account {
         }
     }
 
-    // A signature is [session_key, r, s]: the key leads, because the account holds several and
-    // cannot know which one signed. An unregistered key reads expiry 0, so this rejects an unknown
-    // key and an expired one together
+    // Session key signature [session_key, r, s] must be registered and not expired
     fn live_session(self: @ContractState, signature: Span<felt252>) -> bool {
         get_block_timestamp() < self.sessions.read(*signature[0])
     }
 
+    // Checks that the session key signed the given hash
     fn signed_by_session(hash: felt252, signature: Span<felt252>) -> bool {
         is_valid_stark_signature(hash, *signature[0], signature.slice(1, 2))
     }

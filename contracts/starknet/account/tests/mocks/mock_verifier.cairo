@@ -5,7 +5,7 @@ pub mod MockVerifier {
 
     #[abi(embed_v0)]
     impl MockVerifierImpl of verifier::honk_verifier::IUltraKeccakZKHonkVerifier<ContractState> {
-        // Skips the proof check: the calldata is count, (low, high) * count, returned as is
+        // The mock returns the public inputs without checking a proof
         fn verify_ultra_keccak_zk_honk_proof(
             self: @ContractState, full_proof_with_hints: Span<felt252>,
         ) -> Result<Span<u256>, felt252> {

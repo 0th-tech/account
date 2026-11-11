@@ -6,7 +6,7 @@ pub mod MockRegistry {
     // Starknet
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
 
-    // Holds the one key set at deploy, so a test sees which modulus the account asks about
+    // The mock knows only the key set at deploy, so the account must ask about that modulus
     #[storage]
     struct Storage {
         key: felt252,

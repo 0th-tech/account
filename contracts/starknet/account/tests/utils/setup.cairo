@@ -10,7 +10,7 @@ use crate::utils::helpers::{
 };
 
 pub fn setup(verifier: ByteArray, identity_hash: u256, with_key: bool) -> IAccountDispatcher {
-    // Clock: one day before the fixture expires, tests move it when they need to
+    // The clock starts one day before the fixture expires
     start_cheat_block_timestamp_global(EXPIRY - 24 * 3600);
 
     // Registry, holding the fixture's key or none

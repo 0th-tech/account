@@ -112,13 +112,13 @@ fn test_is_valid_signature_rejected() {
     let account = setup_session();
     let signature = session_signature(TX_HASH);
 
-    // The signature is real, but it signs another hash than the one being checked
+    // A real signature of another hash
     assert_eq!(src6(account).is_valid_signature(TX_HASH + 1, signature.clone()), 0);
 
-    // A plain [r, s], what a wallet library sends when nothing names the session key
+    // A plain [r, s], as wallet libraries send it
     assert_eq!(src6(account).is_valid_signature(TX_HASH, array![*signature[1], *signature[2]]), 0);
 
-    // The session has expired, so the key that signed is no longer one the account accepts
+    // The clock is at the session's expiry
     start_cheat_block_timestamp_global(EXPIRY);
     assert_eq!(src6(account).is_valid_signature(TX_HASH, signature), 0);
 }
@@ -127,7 +127,7 @@ fn test_is_valid_signature_rejected() {
 fn test_is_valid_signature_unknown_session() {
     let account = setup("MockVerifier", fixture_identity(), true);
 
-    // A session key the account never registered reads expiry 0, so it is rejected as expired
+    // An unregistered key has expiry 0, so it fails like an expired one
     assert_eq!(src6(account).is_valid_signature(TX_HASH, session_signature(TX_HASH)), 0);
 }
 
