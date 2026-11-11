@@ -62,9 +62,17 @@ pub mod Account {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         #[flat]
         SRC5Event: SRC5Component::Event,
+        SessionRegistered: SessionRegistered,
+    }
+
+    #[derive(Drop, Debug, PartialEq, starknet::Event)]
+    pub struct SessionRegistered {
+        #[key]
+        pub session_key: felt252,
+        pub expiry: u64,
     }
 
     #[constructor]
@@ -119,6 +127,7 @@ pub mod Account {
 
             // Store the session
             self.sessions.write(session_key, expiry);
+            self.emit(SessionRegistered { session_key, expiry });
         }
 
         fn get_session_expiry(self: @ContractState, session_key: felt252) -> u64 {

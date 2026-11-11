@@ -1,8 +1,9 @@
 // Project
+use account::account::Account::{Event, SessionRegistered};
 use account::account::{IAccountDispatcherTrait, MAX_SESSION};
 
 // Snforge
-use snforge_std::start_cheat_block_timestamp_global;
+use snforge_std::{EventSpyAssertionsTrait, spy_events, start_cheat_block_timestamp_global};
 
 // Tests
 use crate::utils::helpers::{
@@ -14,10 +15,14 @@ use crate::utils::setup::{fixture_identity, setup};
 fn test_register_session() {
     let account = setup("MockVerifier", fixture_identity(), true);
     let inputs = public_inputs(load_proof().span());
+    let mut spy = spy_events();
 
     account.register_session(mock_proof(inputs.span()).span());
 
-    assert_eq!(account.get_session_expiry(session_key(inputs.span())), EXPIRY);
+    let session_key = session_key(inputs.span());
+    assert_eq!(account.get_session_expiry(session_key), EXPIRY);
+    let event = SessionRegistered { session_key, expiry: EXPIRY };
+    spy.assert_emitted(@array![(account.contract_address, Event::SessionRegistered(event))]);
 }
 
 #[test]
