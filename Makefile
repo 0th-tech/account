@@ -1,6 +1,9 @@
-.PHONY: image circuit verifier deploy deploy-verifier declare-account build test clean fclean fmt fmt-check
+.PHONY: image verifier deploy deploy-verifier declare-account build test clean fclean fmt fmt-check
 
 NETWORK ?= devnet
+
+# A download that fails leaves no partial file behind
+.DELETE_ON_ERROR:
 
 CONTRACT = contracts/starknet
 VERIFIER_DIR = $(CONTRACT)/verifier
@@ -18,15 +21,13 @@ image:
 
 RUN = docker run --rm --user "$$(id -u):$$(id -g)" -v "$$(pwd)":/work $(IMAGE) bash -c
 
-# target/circuit/{vk,proof,public_inputs}, from the circuit's release
-circuit:
-	mkdir -p target/circuit
-	for file in vk proof public_inputs; do \
-		curl -fsSL $(CIRCUIT_RELEASE)/$$file -o target/circuit/$$file || exit 1; \
-	done
+# A file from the circuit's release, downloaded again whenever this Makefile changes, since it pins the version
+target/circuit/%: Makefile
+	mkdir -p $(@D)
+	curl -fsSL $(CIRCUIT_RELEASE)/$* -o $@
 
 # Garaga warns that bb and nargo are missing, which is harmless: the vk comes from the circuit release
-verifier: image circuit
+verifier: image target/circuit/vk target/circuit/proof target/circuit/public_inputs
 	$(RUN) '\
 		rm -rf /tmp/verifier && \
 		(cd /tmp && garaga gen --system $(SYSTEM) --vk /work/target/circuit/vk --project-name verifier) && \
