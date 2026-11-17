@@ -1,4 +1,4 @@
-.PHONY: image circuit verifier deploy deploy-verifier declare-account test clean fclean fmt fmt-check
+.PHONY: image circuit verifier deploy deploy-verifier declare-account build test clean fclean fmt fmt-check
 
 NETWORK ?= devnet
 
@@ -56,6 +56,9 @@ declare-account:
 	value=$$(cd $(CONTRACT) && sncast --profile $(NETWORK) --json declare --package account \
 		--contract-name Account | jq -eRr 'fromjson? | select(.type == "response").class_hash') && \
 		$(call SET,ACCOUNT_CLASS_HASH)
+
+build:
+	cd $(CONTRACT) && scarb --release build
 
 test:
 	cd $(CONTRACT) && snforge test
