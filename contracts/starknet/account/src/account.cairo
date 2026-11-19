@@ -7,7 +7,7 @@ pub trait IAccount<TContractState> {
 // The one key registry function the account calls, matched by selector
 #[starknet::interface]
 pub trait IKeyRegistry<TContractState> {
-    fn is_key(self: @TContractState, modulus: Span<u256>) -> bool;
+    fn is_key(self: @TContractState, key_hash: u256) -> bool;
 }
 
 // Longest session a proof may ask for (30 days)
@@ -33,16 +33,16 @@ pub mod Account {
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address, get_tx_info};
 
     // Verifier
-    use verifier::honk_verifier::{
-        IUltraKeccakZKHonkVerifierDispatcher, IUltraKeccakZKHonkVerifierDispatcherTrait,
+    use verifier::groth16_verifier::{
+        IGroth16VerifierBN254Dispatcher, IGroth16VerifierBN254DispatcherTrait,
     };
     use super::{IKeyRegistryDispatcher, IKeyRegistryDispatcherTrait, MAX_SESSION};
 
-    // Position of each public input of the login circuit's proof
-    const MODULUS_LIMBS: usize = 18;
-    const SESSION_KEY_INPUT: usize = 18;
-    const EXPIRY_INPUT: usize = 19;
-    const IDENTITY_INPUT: usize = 20;
+    // Position of each public value of the login circuit's proof, where iat is at 2
+    const IDENTITY_INPUT: usize = 0;
+    const KEY_HASH_INPUT: usize = 1;
+    const SESSION_KEY_INPUT: usize = 3;
+    const EXPIRY_INPUT: usize = 4;
 
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
@@ -93,14 +93,12 @@ pub mod Account {
     impl AccountImpl of super::IAccount<ContractState> {
         fn register_session(ref self: ContractState, proof: Span<felt252>) {
             // Verify the proof
-            let inputs = IUltraKeccakZKHonkVerifierDispatcher {
-                contract_address: self.verifier.read(),
-            }
-                .verify_ultra_keccak_zk_honk_proof(proof)
+            let inputs = IGroth16VerifierBN254Dispatcher { contract_address: self.verifier.read() }
+                .verify_groth16_proof_bn254(proof)
                 .expect('invalid proof');
 
             // Read the public inputs
-            let modulus = inputs.slice(0, MODULUS_LIMBS);
+            let key_hash = *inputs[KEY_HASH_INPUT];
             // u256 to felt252 fails above the stark prime, a big key is rejected
             let session_key: felt252 = (*inputs[SESSION_KEY_INPUT])
                 .try_into()
@@ -113,7 +111,7 @@ pub mod Account {
 
             // Check the signing key is the provider's (the proof holds for any RSA key)
             assert(
-                IKeyRegistryDispatcher { contract_address: self.registry.read() }.is_key(modulus),
+                IKeyRegistryDispatcher { contract_address: self.registry.read() }.is_key(key_hash),
                 'unknown provider key',
             );
 

@@ -7,7 +7,8 @@ use snforge_std::{EventSpyAssertionsTrait, spy_events, start_cheat_block_timesta
 
 // Tests
 use crate::utils::helpers::{
-    EXPIRY, SESSION_KEY_INPUT, load_proof, mock_proof, public_inputs, replace_input, session_key,
+    EXPIRY, PROOF_POINTS_FELTS, SESSION_KEY_INPUT, load_proof, mock_proof, public_inputs,
+    session_key,
 };
 use crate::utils::setup::{fixture_identity, setup};
 
@@ -58,8 +59,9 @@ fn test_register_session_expired() {
 }
 
 #[test]
+#[fork("SEPOLIA")]
 fn test_register_session_real_proof() {
-    let account = setup("UltraKeccakZKHonkVerifier", fixture_identity(), true);
+    let account = setup("Groth16VerifierBN254", fixture_identity(), true);
     let proof = load_proof();
     let inputs = public_inputs(proof.span());
 
@@ -68,24 +70,35 @@ fn test_register_session_real_proof() {
     assert_eq!(account.get_session_expiry(session_key(inputs.span())), EXPIRY);
 }
 
-// Garaga panics in its hint check before it can return 'invalid proof'
+// Garaga's MSM class panics in its hint check before the verifier can return 'invalid proof'
 #[test]
+#[fork("SEPOLIA")]
 #[should_panic(
-    expected: ('Wrong GLV/FakeGLV decomposition', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'),
+    expected: (
+        'Wrong GLV/FakeGLV decomposition',
+        'ENTRYPOINT_FAILED',
+        'ENTRYPOINT_FAILED',
+        'ENTRYPOINT_FAILED',
+    ),
 )]
 fn test_register_session_real_proof_tampered_session_key() {
-    let account = setup("UltraKeccakZKHonkVerifier", fixture_identity(), true);
-    let mut proof = load_proof();
-    let inputs = public_inputs(proof.span());
+    let account = setup("Groth16VerifierBN254", fixture_identity(), true);
+    let proof = load_proof();
 
-    // Session key 2 replaces the real one, the rest of the proof is unchanged
-    let tampered = replace_input(inputs.span(), SESSION_KEY_INPUT, 2);
-    let mut tampered_proof = mock_proof(tampered.span());
-    for i in (1 + 2 * tampered.len())..proof.len() {
-        tampered_proof.append(*proof[i]);
+    // Session key 2 replaces the real one (its low half 2, its high half 0), the rest is unchanged
+    let low = PROOF_POINTS_FELTS + 1 + 2 * SESSION_KEY_INPUT;
+    let mut tampered = array![];
+    for i in 0..proof.len() {
+        tampered.append(if i == low {
+            2
+        } else if i == low + 1 {
+            0
+        } else {
+            *proof[i]
+        });
     }
 
-    account.register_session(tampered_proof.span()); // (must panic)
+    account.register_session(tampered.span()); // (must panic)
 }
 
 #[test]

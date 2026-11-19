@@ -1,4 +1,4 @@
-.PHONY: image verifier deploy deploy-verifier declare-account build test clean fclean fmt fmt-check
+.PHONY: image verifier deploy declare-garaga deploy-verifier declare-account build test clean fclean fmt fmt-check FORCE
 
 NETWORK ?= devnet
 
@@ -7,9 +7,9 @@ NETWORK ?= devnet
 
 CONTRACT = contracts/starknet
 VERIFIER_DIR = $(CONTRACT)/verifier
-SYSTEM = ultra_keccak_zk_honk
+SYSTEM = groth16
 IMAGE = 0th-account-tools
-CIRCUIT_VERSION ?= v0.1.0
+CIRCUIT_VERSION ?= v0.2.0
 CIRCUIT_RELEASE = https://github.com/0th-tech/circuit/releases/download/$(CIRCUIT_VERSION)
 DEPLOYMENT = deployments/$(NETWORK).env
 
@@ -21,27 +21,37 @@ image:
 
 RUN = docker run --rm --user "$$(id -u):$$(id -g)" -v "$$(pwd)":/work $(IMAGE) bash -c
 
-# A file from the circuit's release, downloaded again whenever this Makefile changes, since it pins the version
-target/circuit/%: Makefile
+# The pinned source of the downloads below. A new pin rewrites this file, so they download again
+target/.pins: FORCE
+	@mkdir -p $(@D) && echo '$(CIRCUIT_RELEASE)' | cmp -s - $@ || echo '$(CIRCUIT_RELEASE)' > $@
+
+target/circuit/%: target/.pins
 	mkdir -p $(@D)
 	curl -fsSL $(CIRCUIT_RELEASE)/$* -o $@
 
-# Garaga warns that bb and nargo are missing, which is harmless: the vk comes from the circuit release
-verifier: image target/circuit/vk target/circuit/proof target/circuit/public_inputs
+verifier: image target/circuit/vk.json target/circuit/proof.json target/circuit/public.json
 	$(RUN) '\
 		rm -rf /tmp/verifier && \
-		(cd /tmp && garaga gen --system $(SYSTEM) --vk /work/target/circuit/vk --project-name verifier) && \
+		(cd /tmp && garaga gen --system $(SYSTEM) --vk /work/target/circuit/vk.json --project-name verifier) && \
 		rm -f $(VERIFIER_DIR)/src/*.cairo && \
 		cp /tmp/verifier/src/*.cairo $(VERIFIER_DIR)/src/ && \
 		cp /tmp/verifier/tests/test_contract.cairo $(VERIFIER_DIR)/tests/ && \
-		garaga calldata --system $(SYSTEM) --vk target/circuit/vk --proof target/circuit/proof \
-			--public-inputs target/circuit/public_inputs --format snforge --output-path $(VERIFIER_DIR)/tests \
+		garaga calldata --system $(SYSTEM) --vk target/circuit/vk.json --proof target/circuit/proof.json \
+			--public-inputs target/circuit/public.json --format snforge --output-path $(VERIFIER_DIR)/tests \
 	'
 	cd $(VERIFIER_DIR) && scarb fmt
 
 # Network targets: make <target> NETWORK=<devnet|sepolia|mainnet>, devnet by default
 
-deploy: deploy-verifier declare-account
+# Garaga's verifier library-calls Garaga's MSM class by this hash. Garaga declared it on Sepolia and
+# mainnet, so a devnet gets the same class from Sepolia
+GARAGA_MSM_CLASS = 0x396d5915ecf475aab117bb25a0272b261e9e25ffe1c0ce05a51a3f77489c89e
+
+deploy: $(if $(filter devnet,$(NETWORK)),declare-garaga) deploy-verifier declare-account
+
+declare-garaga:
+	cd $(CONTRACT) && sncast --profile $(NETWORK) declare-from --class-hash $(GARAGA_MSM_CLASS) \
+		--source-network sepolia
 
 SET = mkdir -p deployments && touch $(DEPLOYMENT) && \
 	{ grep -v "^$(1)=" $(DEPLOYMENT); echo "$(1)=$$value"; } > $(DEPLOYMENT).tmp && \
@@ -49,7 +59,7 @@ SET = mkdir -p deployments && touch $(DEPLOYMENT) && \
 
 deploy-verifier:
 	value=$$(cd $(CONTRACT) && sncast --profile $(NETWORK) --json deploy --package verifier \
-		--contract-name UltraKeccakZKHonkVerifier --salt 0x0 | jq -eRr 'fromjson? | select(.type == "response").contract_address') && \
+		--contract-name Groth16VerifierBN254 --salt 0x0 | jq -eRr 'fromjson? | select(.type == "response").contract_address') && \
 		$(call SET,VERIFIER)
 
 # Accounts are deployed by the relayer, one per user, so only the class is declared here

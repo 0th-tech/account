@@ -19,10 +19,14 @@ pub const SESSION_PRIVKEY: felt252 = 0x1234567890abcdef;
 
 pub const TX_HASH: felt252 = 'TX_HASH';
 
-// Public inputs of the circuit, in order
-pub const MODULUS_LIMBS: u32 = 18;
-pub const SESSION_KEY_INPUT: u32 = 18;
-pub const IDENTITY_INPUT: u32 = 20;
+// Public values of the circuit, by position
+pub const IDENTITY_INPUT: u32 = 0;
+pub const KEY_HASH_INPUT: u32 = 1;
+pub const SESSION_KEY_INPUT: u32 = 3;
+
+// Garaga's Groth16 calldata starts with the proof's three points (A, B, C as u384 coordinates),
+// then the public values: count, (low, high) * count
+pub const PROOF_POINTS_FELTS: u32 = 32;
 
 pub fn deploy_contract(name: ByteArray, calldata: Array<felt252>) -> ContractAddress {
     let contract = declare(name).unwrap_syscall().contract_class();
@@ -35,13 +39,13 @@ pub fn load_proof() -> Array<felt252> {
     read_txt(@FileTrait::new("../verifier/tests/proof_calldata.txt"))
 }
 
-/// Reads the public inputs at the start of a proof's calldata: count, (low, high) * count
+/// Reads the public values of a proof's calldata
 pub fn public_inputs(proof: Span<felt252>) -> Array<u256> {
-    let count: u32 = (*proof[0]).try_into().unwrap();
+    let count: u32 = (*proof[PROOF_POINTS_FELTS]).try_into().unwrap();
     let mut inputs = array![];
     for i in 0..count {
-        let low = (*proof[1 + 2 * i]).try_into().unwrap();
-        let high = (*proof[2 + 2 * i]).try_into().unwrap();
+        let low = (*proof[PROOF_POINTS_FELTS + 1 + 2 * i]).try_into().unwrap();
+        let high = (*proof[PROOF_POINTS_FELTS + 2 + 2 * i]).try_into().unwrap();
         inputs.append(u256 { low, high });
     }
     inputs
@@ -57,20 +61,7 @@ pub fn mock_proof(inputs: Span<u256>) -> Array<felt252> {
     proof
 }
 
-/// Copies the inputs with the one at index replaced
-pub fn replace_input(inputs: Span<u256>, index: u32, value: u256) -> Array<u256> {
-    let mut copy = array![];
-    for i in 0..inputs.len() {
-        copy.append(if i == index {
-            value
-        } else {
-            *inputs[i]
-        });
-    }
-    copy
-}
-
-/// The session key the proof registers (public input 18)
+/// The session key the proof registers
 pub fn session_key(inputs: Span<u256>) -> felt252 {
     (*inputs[SESSION_KEY_INPUT]).try_into().unwrap()
 }

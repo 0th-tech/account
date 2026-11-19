@@ -4,9 +4,9 @@ pub mod MockVerifier {
     struct Storage {}
 
     #[abi(embed_v0)]
-    impl MockVerifierImpl of verifier::honk_verifier::IUltraKeccakZKHonkVerifier<ContractState> {
+    impl MockVerifierImpl of verifier::groth16_verifier::IGroth16VerifierBN254<ContractState> {
         // The mock returns the public inputs without checking a proof
-        fn verify_ultra_keccak_zk_honk_proof(
+        fn verify_groth16_proof_bn254(
             self: @ContractState, full_proof_with_hints: Span<felt252>,
         ) -> Result<Span<u256>, felt252> {
             let count: u32 = (*full_proof_with_hints.at(0)).try_into().unwrap();

@@ -20,7 +20,13 @@ assert_macros = "2.18.0"
 [[target.starknet-contract]]
 sierra = true
 casm = true
-build-external-contracts = ["verifier::honk_verifier::UltraKeccakZKHonkVerifier"]
+build-external-contracts = ["verifier::groth16_verifier::Groth16VerifierBN254"]
+
+# Garaga's verifier library-calls Garaga's MSM class, declared on Sepolia
+[[tool.snforge.fork]]
+name = "SEPOLIA"
+url = "https://api.zan.top/public/starknet-sepolia/rpc/v0_10"
+block_id.tag = "latest"
 
 [scripts]
 test.workspace = true

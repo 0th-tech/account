@@ -6,7 +6,7 @@ use snforge_std::start_cheat_block_timestamp_global;
 
 // Tests
 use crate::utils::helpers::{
-    EXPIRY, IDENTITY_INPUT, MODULUS_LIMBS, deploy_contract, load_proof, public_inputs,
+    EXPIRY, IDENTITY_INPUT, KEY_HASH_INPUT, deploy_contract, load_proof, public_inputs,
 };
 
 pub fn setup(verifier: ByteArray, identity_hash: u256, with_key: bool) -> IAccountDispatcher {
@@ -15,13 +15,13 @@ pub fn setup(verifier: ByteArray, identity_hash: u256, with_key: bool) -> IAccou
 
     // Registry, holding the fixture's key or none
     let inputs = public_inputs(load_proof().span());
-    let modulus = if with_key {
-        inputs.span().slice(0, MODULUS_LIMBS)
+    let key_hash = if with_key {
+        *inputs[KEY_HASH_INPUT]
     } else {
-        array![].span()
+        0
     };
     let mut calldata = array![];
-    Serde::serialize(@modulus, ref calldata);
+    Serde::serialize(@key_hash, ref calldata);
     let registry_address = deploy_contract("MockRegistry", calldata);
 
     // Verifier
