@@ -71,8 +71,10 @@ declare-account:
 build:
 	cd $(CONTRACT) && scarb --release build
 
+# The public Sepolia RPC the fork tests read from refuses requests that arrive too fast, so the tests
+# run one at a time
 test:
-	cd $(CONTRACT) && snforge test
+	cd $(CONTRACT) && snforge test --max-threads 1
 
 clean:
 	rm -rf target $(CONTRACT)/target
